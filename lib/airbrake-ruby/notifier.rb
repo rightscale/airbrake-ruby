@@ -127,6 +127,8 @@ module Airbrake
     end
 
     def default_sender
+      # This spawns workers if necessary
+      @async_sender.has_workers?
       # Always send asynchronously to avoid blocking
       return @async_sender
     end
