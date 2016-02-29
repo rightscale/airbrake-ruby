@@ -10,4 +10,27 @@ RSpec.describe Airbrake::SyncSender do
       expect(https.read_timeout).to eq(10)
     end
   end
+
+  describe "#send" do
+    it "catches exceptions raised when calling build_https" do
+      stdout = StringIO.new
+      config = Airbrake::Config.new(logger: Logger.new(stdout))
+      sender = described_class.new config
+      notice = Airbrake::Notice.new(config, AirbrakeTestError.new)
+      allow(sender).to receive(:build_https).and_raise(StandardError.new('foo'))
+      expect(sender.send(notice)).to be_nil
+      expect(stdout.string).to match(/ERROR -- : .+ error at SyncSender.send: foo/)
+    end
+    it "catches exceptions raised when sending" do
+      stdout = StringIO.new
+      config = Airbrake::Config.new(logger: Logger.new(stdout))
+      sender = described_class.new config
+      notice = Airbrake::Notice.new(config, AirbrakeTestError.new)
+      https = double("foo")
+      allow(sender).to receive(:build_https).and_return(https)
+      allow(https).to receive(:request).and_raise(NameError.new('bar'))
+      expect(sender.send(notice)).to be_nil
+      expect(stdout.string).to match(/ERROR -- : .+ error at SyncSender.send: bar/)
+    end
+  end
 end

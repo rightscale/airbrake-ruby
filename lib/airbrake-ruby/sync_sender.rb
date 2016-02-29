@@ -9,18 +9,6 @@ module Airbrake
     CONTENT_TYPE = 'application/json'.freeze
 
     ##
-    # @return [Array] the errors to be rescued and logged during an HTTP request
-    HTTP_ERRORS = [
-      Timeout::Error,
-      Net::HTTPBadResponse,
-      Net::HTTPHeaderSyntaxError,
-      Errno::ECONNRESET,
-      Errno::ECONNREFUSED,
-      EOFError,
-      OpenSSL::SSL::SSLError
-    ].freeze
-
-    ##
     # @param [Airbrake::Config] config
     def initialize(config)
       @config = config
@@ -33,18 +21,15 @@ module Airbrake
     # @param [Airbrake::Notice] endpoint
     # @return [Hash{String=>String}] the parsed HTTP response
     def send(notice, endpoint = @config.endpoint)
-      response = nil
       req = build_post_request(endpoint, notice)
       https = build_https(endpoint)
 
-      begin
-        response = https.request(req)
-      rescue *HTTP_ERRORS => ex
-        @config.logger.error("#{LOG_LABEL} HTTP error: #{ex}")
-        return
-      end
-
+      response = https.request(req)
       Response.parse(response, @config.logger)
+
+    rescue => ex
+      @config.logger.error("#{LOG_LABEL} error at SyncSender.send: #{ex}")
+      return
     end
 
     private

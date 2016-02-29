@@ -231,7 +231,7 @@ RSpec.describe Airbrake::Notifier do
         airbrake.notify_sync(ex)
 
         expect(stderr.string).
-          to match(/ERROR -- : .+ HTTP error: execution expired/)
+          to match(/ERROR -- : .+ error at SyncSender.send: execution expired/)
       end
     end
 
