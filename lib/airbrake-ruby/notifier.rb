@@ -46,6 +46,7 @@ module Airbrake
 
       @async_sender = AsyncSender.new(@config)
       @sync_sender = SyncSender.new(@config)
+      @async_workers_dead_notified = false
     end
 
     ##
@@ -63,6 +64,25 @@ module Airbrake
     # @macro see_public_api_method
     def notify_sync(exception, params = {})
       send_notice(exception, params, @sync_sender)
+    end
+
+    def notify_async(exception, params = {})
+      if @async_sender.has_workers?
+        send_notice(exception, params, @async_sender)
+      else
+        # All async workers have died
+        unless @async_workers_dead_notified
+          # Just try to notify this once
+          @async_workers_dead_notified = true
+          Thread.new do
+            msg = "Not delivering more errors since all airbrake-ruby " \
+              "async workers are dead"
+            exception = StandarError.new msg
+            send_notice(exception, params, @sync_sender)
+          end
+        end
+      end
+      nil
     end
 
     ##
